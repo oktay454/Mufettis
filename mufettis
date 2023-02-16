@@ -21,6 +21,7 @@ ACTIVE_LIST="/tmp/${APP_NAME}.active"
 PROCESS_ID_LIST="/tmp/${APP_NAME}.ids"
 PREFIX_TEMP_DIR="${APP_NAME}"
 TIMEOUT_VALUE=5
+COMMON_SSH_OPTIONS="-o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=${TIMEOUT_VALUE}"
 
 SYSDATE="$(date +%F)"
 SYSDAY="$(date +%A)"
@@ -112,7 +113,7 @@ function RunCommandViaSSH()
 	test -z ${3} && local SSH_PORT=22 || local SSH_PORT="${3}"
 	test -z ${5} && local USER=root || local USER="${5}"
 	test -z ${6} || local SSHPASS="sshpass -p ${6}"
-	${SSHPASS} ssh -p ${SSH_PORT} -i "${SSH_KEY}" -o StrictHostKeyChecking=no -o ConnectTimeout=${TIMEOUT_VALUE} ${4} ${USER}@${1} -- "${2}"
+	${SSHPASS} ssh -p ${SSH_PORT} -i "${SSH_KEY}" ${COMMON_SSH_OPTIONS} ${4} ${USER}@${1} -- "${2}"
 }
 
 function RunLocalScriptRemotelyViaSSH()
@@ -128,7 +129,7 @@ function RunLocalScriptRemotelyViaSSH()
 	test -z ${3} && local SSH_PORT=22 || local SSH_PORT="${3}"
 	test -z ${5} && local USER=root || local USER="${5}"
 	test -z ${6} || local SSHPASS="sshpass -p ${6}"
-	${SSHPASS} ssh -p ${SSH_PORT} -i "${SSH_KEY}" -o StrictHostKeyChecking=no -o ConnectTimeout=${TIMEOUT_VALUE} ${4} ${USER}@${1} -- sh -s < ${2}
+	${SSHPASS} ssh -p ${SSH_PORT} -i "${SSH_KEY}" ${COMMON_SSH_OPTIONS} ${4} ${USER}@${1} -- sh -s < ${2}
 }
 
 function CopyFilesViaWinRM()
@@ -159,7 +160,7 @@ function CopyFilesViaSSH()
 	test -z ${4} && local SSH_PORT=22 || local SSH_PORT="${4}"
 	test -z ${6} && local USER=root || local USER="${6}"
 	test -z ${7} || local SSHPASS="sshpass -p ${7}"
-	${SSHPASS} scp -P ${SSH_PORT} -i "${SSH_KEY}" -o StrictHostKeyChecking=no -o ConnectTimeout=${TIMEOUT_VALUE} ${5} ${USER}@${1} "${2}" "${3}"
+	${SSHPASS} scp -P ${SSH_PORT} -i "${SSH_KEY}" ${COMMON_SSH_OPTIONS} ${5} ${USER}@${1} "${2}" "${3}"
 }
 
 function AddToList()
@@ -199,7 +200,7 @@ function CheckLivesViaSSH()
 	test -z ${2} && local SSH_PORT=22 || local SSH_PORT="${2}"
 	test -z ${4} && local USER=root || local USER="${4}"
 	test -z ${5} || local SSHPASS="sshpass -p ${5}"
-	${SSHPASS} ssh -p ${SSH_PORT} -i "${SSH_KEY}" -o StrictHostKeyChecking=no -o ConnectTimeout=${TIMEOUT_VALUE} ${3} ${USER}@${1} -- 'whoami;hostname;cat /etc/issue.net;uname -a'
+	${SSHPASS} ssh -p ${SSH_PORT} -i "${SSH_KEY}" ${COMMON_SSH_OPTIONS} ${3} ${USER}@${1} -- 'whoami;cat /etc/issue.net;hostname;uname -a'
 }
 
 function AddHostsFile()
@@ -236,6 +237,7 @@ function DeleteProcessID()
 {
 	# 1 UNIQUE
 	test -z ${1} && return 2
+	test -f "${PROCESS_ID_LIST}" || return 1
 	sed -i "/^\$/,/${1}/d" "${PROCESS_ID_LIST}"
 }
 
@@ -294,6 +296,7 @@ function Preliminary()
 	then
 		test -f "${MACHINE_WORK_DIR}/output" && mv "${MACHINE_WORK_DIR}/output" "${MACHINE_WORK_DIR}/machine-info"
 		AddToList "${UNIQUE}" "${ACTIVE_LIST}"
+		test -z ${HNAME} && HNAME="$(sed -n "3p" "${MACHINE_WORK_DIR}/machine-info")"
 		test ! -z ${QUERY} && ColorEcho "GREEN" "${IP}\t${STR_SUCCESS}"
 	else
 		test -f "${MACHINE_WORK_DIR}/output" && mv "${MACHINE_WORK_DIR}/output" "${MACHINE_WORK_DIR}/machine-error"
